@@ -2,11 +2,34 @@ import math
 import os
 from flask import Flask, render_template, request, jsonify
 
-# Auto-detect folder structure (checks if specific files exist in folders, else fall back to root)
-template_dir = 'templates' if os.path.exists('templates/index.html') else '.'
-static_dir = 'static' if os.path.exists('static/index.css') else '.'
+import shutil
 
-app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
+# Self-healing folder structure setup:
+# If files were uploaded directly to the root of the repository, copy them to standard templates/static folders dynamically at startup.
+base_dir = os.path.dirname(os.path.abspath(__file__))
+
+# 1. Handle HTML template
+root_html = os.path.join(base_dir, 'index.html')
+target_html_dir = os.path.join(base_dir, 'templates')
+if os.path.exists(root_html):
+    os.makedirs(target_html_dir, exist_ok=True)
+    shutil.copy(root_html, os.path.join(target_html_dir, 'index.html'))
+
+# 2. Handle CSS stylesheet
+root_css = os.path.join(base_dir, 'index.css')
+target_static_dir = os.path.join(base_dir, 'static')
+if os.path.exists(root_css):
+    os.makedirs(target_static_dir, exist_ok=True)
+    shutil.copy(root_css, os.path.join(target_static_dir, 'index.css'))
+
+# 3. Handle JavaScript file
+root_js = os.path.join(base_dir, 'app.js')
+if os.path.exists(root_js):
+    os.makedirs(target_static_dir, exist_ok=True)
+    shutil.copy(root_js, os.path.join(target_static_dir, 'app.js'))
+
+# Initialize Flask normally
+app = Flask(__name__)
 
 # ==========================================================================
 # Core Health Assessment Engines (Python Backend)
