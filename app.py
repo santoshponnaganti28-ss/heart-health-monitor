@@ -8,11 +8,11 @@ import shutil
 # If files were uploaded directly to the root of the repository, copy them to standard templates/static folders dynamically at startup.
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
-print("DEBUG: base_dir is", base_dir)
+print("DEBUG: base_dir is", base_dir, flush=True)
 try:
-    print("DEBUG: files in base_dir are", os.listdir(base_dir))
+    print("DEBUG: files in base_dir are", os.listdir(base_dir), flush=True)
 except Exception as e:
-    print("DEBUG: failed to list files:", e)
+    print("DEBUG: failed to list files:", e, flush=True)
 
 # 1. Handle HTML template
 root_html = os.path.join(base_dir, 'index.html')
@@ -33,6 +33,9 @@ root_js = os.path.join(base_dir, 'app.js')
 if os.path.exists(root_js):
     os.makedirs(target_static_dir, exist_ok=True)
     shutil.copy(root_js, os.path.join(target_static_dir, 'app.js'))
+
+print("DEBUG: index.html in root exists?", os.path.exists(root_html), flush=True)
+print("DEBUG: templates/index.html copy exists?", os.path.exists(os.path.join(target_html_dir, 'index.html')), flush=True)
 
 # Initialize Flask normally
 app = Flask(__name__)
