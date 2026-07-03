@@ -2,9 +2,9 @@ import math
 import os
 from flask import Flask, render_template, request, jsonify
 
-# Auto-detect folder structure (handles cases where files are uploaded in folders vs directly in the root)
-template_dir = 'templates' if os.path.exists('templates') else '.'
-static_dir = 'static' if os.path.exists('static') else '.'
+# Auto-detect folder structure (checks if specific files exist in folders, else fall back to root)
+template_dir = 'templates' if os.path.exists('templates/index.html') else '.'
+static_dir = 'static' if os.path.exists('static/index.css') else '.'
 
 app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 
