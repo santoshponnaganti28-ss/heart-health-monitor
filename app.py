@@ -2,7 +2,11 @@ import math
 import os
 from flask import Flask, render_template, request, jsonify
 
-app = Flask(__name__)
+# Auto-detect folder structure (handles cases where files are uploaded in folders vs directly in the root)
+template_dir = 'templates' if os.path.exists('templates') else '.'
+static_dir = 'static' if os.path.exists('static') else '.'
+
+app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 
 # ==========================================================================
 # Core Health Assessment Engines (Python Backend)
