@@ -1,4 +1,5 @@
 import math
+import os
 from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
@@ -199,4 +200,6 @@ def analyze():
 
 if __name__ == '__main__':
     # Start local Flask development server, listening on all interfaces
-    app.run(host='0.0.0.0', debug=True, port=5000)
+    # Render binds the app to the PORT environment variable, defaulting to 5000 locally
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', debug=True, port=port)
