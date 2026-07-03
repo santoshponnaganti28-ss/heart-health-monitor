@@ -8,6 +8,12 @@ import shutil
 # If files were uploaded directly to the root of the repository, copy them to standard templates/static folders dynamically at startup.
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
+print("DEBUG: base_dir is", base_dir)
+try:
+    print("DEBUG: files in base_dir are", os.listdir(base_dir))
+except Exception as e:
+    print("DEBUG: failed to list files:", e)
+
 # 1. Handle HTML template
 root_html = os.path.join(base_dir, 'index.html')
 target_html_dir = os.path.join(base_dir, 'templates')
