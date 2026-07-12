@@ -288,6 +288,6 @@ def analyze():
 
 if __name__ == '__main__':
     # Start local Flask development server, listening on all interfaces
-    # Render binds the app to the PORT environment variable, defaulting to 5000 locally
+    # Set debug=False in production to prevent Flask reloader hangs
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', debug=True, port=port)
+    app.run(host='0.0.0.0', debug=False, port=port)
