@@ -1,5 +1,7 @@
 import math
 import os
+import pickle
+import numpy as np
 from flask import Flask, render_template, request, jsonify
 
 import shutil
@@ -39,6 +41,25 @@ print("DEBUG: templates/index.html copy exists?", os.path.exists(os.path.join(ta
 
 # Initialize Flask normally
 app = Flask(__name__)
+
+# Load Machine Learning Model and Scaler at Startup
+ml_model = None
+ml_scaler = None
+
+model_path = os.path.join(base_dir, 'heart_model.pkl')
+scaler_path = os.path.join(base_dir, 'scaler.pkl')
+
+if os.path.exists(model_path) and os.path.exists(scaler_path):
+    try:
+        with open(model_path, 'rb') as f:
+            ml_model = pickle.load(f)
+        with open(scaler_path, 'rb') as f:
+            ml_scaler = pickle.load(f)
+        print("[SUCCESS] Machine learning Random Forest model loaded successfully!", flush=True)
+    except Exception as e:
+        print(f"[WARNING] Failed to load ML model: {e}", flush=True)
+else:
+    print("[WARNING] heart_model.pkl or scaler.pkl not found! Running in point-scoring fallback mode.", flush=True)
 
 # ==========================================================================
 # Core Health Assessment Engines (Python Backend)
@@ -210,7 +231,38 @@ def analyze():
     # Execute health calculations
     bmi_results = calculate_bmi(height, weight)
     heart_results = assess_heart_rate(bpm, activity)
-    risk_results = predict_cardio_risk(age, bmi_results['category'], bpm, activity)
+    
+    # Calculate Risk using ML Model if loaded, else fall back to point scoring
+    if ml_model is not None and ml_scaler is not None:
+        try:
+            # Prepare inputs: [age, bmi, bpm] (matches real Framingham features)
+            features = np.array([[age, bmi_results['val'], bpm]])
+            
+            # Scale features
+            features_scaled = ml_scaler.transform(features)
+            
+            # Predict probability of heart disease risk (class 1)
+            prob_risk = ml_model.predict_proba(features_scaled)[0][1]
+            prob_percentage = int(round(prob_risk * 100))
+            
+            # Categorize risk based on ML probability thresholds
+            if prob_risk >= 0.70:
+                risk_level = f"High ({prob_percentage}%)"
+                risk_class = "high"
+            elif prob_risk >= 0.35:
+                risk_level = f"Moderate ({prob_percentage}%)"
+                risk_class = "moderate"
+            else:
+                risk_level = f"Low ({prob_percentage}%)"
+                risk_class = "low"
+                
+            risk_results = {"level": risk_level, "class": risk_class}
+        except Exception as e:
+            print(f"[WARNING] ML prediction failed, using point-scoring fallback: {e}", flush=True)
+            risk_results = predict_cardio_risk(age, bmi_results['category'], bpm, activity)
+    else:
+        risk_results = predict_cardio_risk(age, bmi_results['category'], bpm, activity)
+
     recs_results = generate_recommendations(
         bmi_results['category'], bpm, activity, age, heart_results['status']
     )
