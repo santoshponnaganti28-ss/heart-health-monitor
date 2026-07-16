@@ -16,9 +16,9 @@
 
   /* Primary Accent & Brand colors */
   --primary: hsl(184, 100%, 50%); /* Neon Cyan */
-  --primary-glow: hsla(184, 100%, 50%, 0.4);
+  --primary-glow: hsla(184, 100%, 50%, 0.2);
   --secondary: hsl(208, 99%, 65%); /* Electric Blue */
-  --secondary-glow: hsla(208, 99%, 65%, 0.35);
+  --secondary-glow: hsla(208, 99%, 65%, 0.15);
 
   /* Status Colors */
   --color-success: hsl(150, 84%, 43%); /* Emerald */
@@ -444,6 +444,56 @@ h1, h2, h3, h4 {
   100% { opacity: 0.4; }
 }
 
+/* Navigation Tabs */
+.nav-tabs {
+  display: flex;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-color);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  gap: 4px;
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  padding: 8px 18px;
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.85rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.tab-btn:hover {
+  color: var(--color-text-main);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.tab-btn.active {
+  background: var(--primary-glow);
+  color: var(--primary);
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.05);
+}
+
+/* Tab Views System */
+.tab-view {
+  display: none;
+  width: 100%;
+}
+
+.tab-view.active {
+  display: block;
+  animation: viewFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes viewFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* Grid Layout */
 .dashboard-grid {
   display: grid;
@@ -807,7 +857,180 @@ h1, h2, h3, h4 {
   margin-top: 24px;
 }
 
-/* Footer styling */
+/* ==========================================================================
+   Patient Database Tab CSS
+   ========================================================================== */
+.database-layout {
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.db-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  position: relative;
+  flex-grow: 1;
+  max-width: 500px;
+  display: flex;
+  align-items: center;
+}
+
+.search-box svg {
+  position: absolute;
+  left: 15px;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 12px 16px 12px 45px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  color: var(--color-text-main);
+  outline: none;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  transition: var(--transition-smooth);
+}
+
+.search-box input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 15px rgba(0, 242, 254, 0.1);
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.db-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+.db-table th {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 14px 18px;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.db-table td {
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: var(--color-text-main);
+  vertical-align: middle;
+}
+
+.db-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.db-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.btn-danger-xs {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  padding: 4px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.btn-danger-xs:hover {
+  background: var(--color-danger);
+  color: var(--bg-deep);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-muted {
+  color: var(--color-text-muted);
+}
+
+/* ==========================================================================
+   Toast Notification Banner System
+   ========================================================================== */
+#toast-container {
+  position: fixed;
+  bottom: 25px;
+  right: 25px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.toast {
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-color);
+  padding: 14px 20px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-main);
+  font-size: 0.85rem;
+  font-weight: 500;
+  box-shadow: var(--shadow-glow);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transform: translateY(20px);
+  opacity: 0;
+  animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards, 
+             toastOut 0.3s cubic-bezier(0.16, 1, 0.3, 1) 2.7s forwards;
+  pointer-events: auto;
+}
+
+.toast-success {
+  border-left: 4px solid var(--color-success);
+}
+
+.toast-danger {
+  border-left: 4px solid var(--color-danger);
+}
+
+.toast-info {
+  border-left: 4px solid var(--primary);
+}
+
+@keyframes toastIn {
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes toastOut {
+  to { transform: translateY(-20px); opacity: 0; }
+}
+
+/* ==========================================================================
+   Footer & Printing layout
+   ========================================================================== */
 .main-footer {
   text-align: center;
   padding: 24px;
@@ -827,8 +1050,13 @@ h1, h2, h3, h4 {
     padding: 0;
     max-width: 100%;
   }
-  .glow-bg, .main-footer, .btn, .ecg-presets, .system-status {
+  .glow-bg, .main-footer, .btn, .ecg-presets, .system-status, .nav-tabs, #view-database {
     display: none !important;
+  }
+  #view-dashboard {
+    display: block !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
   .glass {
     border: 1px solid #ccc;
@@ -872,5 +1100,17 @@ h1, h2, h3, h4 {
   }
   .metrics-comparison {
     grid-template-columns: 1fr;
+  }
+  .dashboard-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start;
+  }
+  .nav-tabs {
+    width: 100%;
+  }
+  .tab-btn {
+    flex-grow: 1;
+    text-align: center;
   }
 }

@@ -18,6 +18,9 @@
     <div class="glow-orb orb-3"></div>
   </div>
 
+  <!-- Toast notification system -->
+  <div id="toast-container"></div>
+
   <div class="app-container">
     
     <!-- ================= SCREEN 1: WELCOME SCREEN ================= -->
@@ -32,17 +35,17 @@
             <div class="pulse-ring"></div>
           </div>
           <h1>PulseGuard <span class="gradient-text">AI</span></h1>
-          <p class="tagline">Personalized Heart Health Monitoring & Recommendations</p>
+          <p class="tagline">ML-Powered Heart Health Monitoring & Recommendations</p>
         </div>
 
         <form id="welcome-form" onsubmit="event.preventDefault(); proceedToDashboard();">
           <div class="input-group">
-            <label for="user-name">What is your name?</label>
-            <input type="text" id="user-name" required placeholder="Enter your name..." autocomplete="off">
+            <label for="user-name">What is the Patient's Name?</label>
+            <input type="text" id="user-name" required placeholder="Enter name..." autocomplete="off">
             <span class="focus-border"></span>
           </div>
           <button type="submit" class="btn btn-primary btn-glow">
-            Get Started
+            Enter Dashboard
             <svg class="arrow-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M5 12H19M19 12L13 6M19 12L13 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -51,260 +54,296 @@
       </div>
     </section>
 
-    <!-- ================= SCREEN 2: MAIN DASHBOARD ================= -->
+    <!-- ================= SCREEN 2: MAIN SYSTEM ================= -->
     <section id="dashboard-screen" class="screen">
       <header class="dashboard-header glass">
         <div class="user-greeting">
           <div class="user-avatar" id="avatar-initials">U</div>
           <div>
-            <h2>Hello, <span id="display-name" class="gradient-text">User</span>!</h2>
-            <p>Your Health Dashboard</p>
+            <h2>Welcome back, <span id="display-name" class="gradient-text">User</span>!</h2>
+            <p>Clinical Vitals Platform</p>
           </div>
         </div>
+
+        <!-- Navigation Tabs -->
+        <div class="nav-tabs">
+          <button id="tab-dashboard" class="tab-btn active" onclick="switchTab('dashboard')">Diagnostics</button>
+          <button id="tab-database" class="tab-btn" onclick="switchTab('database')">Patient Database</button>
+        </div>
+
         <div class="system-status">
           <div class="status-indicator live"></div>
-          <span>System: Active</span>
-          <button class="btn btn-secondary btn-sm" onclick="resetApp()">Change User</button>
+          <span>Server: SQLite + RF Active</span>
+          <button class="btn btn-secondary btn-sm" onclick="resetApp()">Exit</button>
         </div>
       </header>
 
-      <div class="dashboard-grid">
-        
-        <!-- COLUMN 1: METRICS FORM -->
-        <div class="grid-col col-left">
-          <div class="card glass">
-            <div class="card-header">
-              <div class="icon-circle">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M3 20v-8a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v8M13 20v-4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v8M3 12V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v6M13 10V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v6"></path></svg>
-              </div>
-              <h3>Enter Your Vitals</h3>
-            </div>
-            <p class="card-subtitle">Fill in your physical attributes and heart rate to generate a health profile.</p>
-            
-            <form id="vitals-form" onsubmit="event.preventDefault(); analyzeHealth();">
-              <div class="form-grid">
-                <div class="input-group">
-                  <label for="height">Height (cm)</label>
-                  <input type="number" id="height" min="100" max="250" placeholder="e.g. 175" required>
-                  <span class="focus-border"></span>
-                </div>
-                
-                <div class="input-group">
-                  <label for="weight">Weight (kg)</label>
-                  <input type="number" id="weight" min="30" max="250" placeholder="e.g. 70" required>
-                  <span class="focus-border"></span>
-                </div>
-
-                <div class="input-group">
-                  <label for="age">Age (years)</label>
-                  <input type="number" id="age" min="1" max="120" placeholder="e.g. 35" required>
-                  <span class="focus-border"></span>
-                </div>
-
-                <div class="input-group">
-                  <label for="bpm">Heart Rate (BPM)</label>
-                  <input type="number" id="bpm" min="30" max="220" placeholder="e.g. 72" required>
-                  <span class="focus-border"></span>
-                </div>
-              </div>
-
-              <div class="input-group">
-                <label for="activity-level">Daily Physical Activity Level</label>
-                <select id="activity-level" class="styled-select">
-                  <option value="sedentary">Sedentary (Little or no exercise)</option>
-                  <option value="moderate" selected>Moderately Active (Moderate exercise 3-5 days/wk)</option>
-                  <option value="highly-active">Highly Active (Heavy exercise/sports 6-7 days/wk)</option>
-                </select>
-              </div>
-
-              <button type="submit" class="btn btn-primary btn-full btn-glow">
-                Analyze Heart Health (Python)
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-              </button>
-            </form>
-          </div>
-
-          <!-- ECG SCANNER VISUALIZER -->
-          <div class="card glass ecg-card">
-            <div class="card-header">
-              <div class="icon-circle">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-              </div>
-              <h3>Live Electrocardiogram (ECG) Simulator</h3>
-            </div>
-            <div class="ecg-monitor-wrapper">
-              <canvas id="ecg-canvas"></canvas>
-              <div class="ecg-readout">
-                <div class="readout-item">
-                  <span class="label">PULSE STATE</span>
-                  <span id="ecg-state-text" class="val text-normal">WAITING</span>
-                </div>
-                <div class="readout-item">
-                  <span class="label">LIVE BPM</span>
-                  <span id="ecg-bpm-text" class="val">--</span>
-                </div>
-              </div>
-            </div>
-            <div class="ecg-presets">
-              <span>Simulation Presets:</span>
-              <div class="preset-buttons">
-                <button class="btn btn-secondary btn-xs active" onclick="setECGPreset('normal')">Normal (70)</button>
-                <button class="btn btn-secondary btn-xs" onclick="setECGPreset('tachy')">High (115)</button>
-                <button class="btn btn-secondary btn-xs" onclick="setECGPreset('brady')">Low (45)</button>
-                <button class="btn btn-secondary btn-xs" onclick="setECGPreset('arrhythmia')">Arrhythmia</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- COLUMN 2: ANALYSIS & RECOMMENDATIONS -->
-        <div class="grid-col col-right">
+      <!-- ================= VIEW A: DASHBOARD VIEW ================= -->
+      <div id="view-dashboard" class="tab-view active">
+        <div class="dashboard-grid">
           
-          <!-- Welcome/Prompt state -->
-          <div id="results-placeholder" class="card glass empty-state">
-            <div class="pulse-icon-container large-icon">
-              <svg class="heart-svg" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-                <path d="M16,28.261L4.351,16.612C2.128,14.389,2.128,10.785,4.351,8.562l0,0c2.223-2.223,5.827-2.223,8.05,0l1.411,1.411
-                c1.207,1.207,3.167,1.207,4.375,0l1.411-1.411c2.223-2.223,5.827-2.223,8.05,0h0c2.223,2.223,2.223,5.827,0,8.05L16,28.261z" />
-              </svg>
-            </div>
-            <h3>Ready for Analysis</h3>
-            <p>Input your height, weight, age, and heart rate on the left, then click <strong>"Analyze Heart Health"</strong> to generate your tailored clinical insights, BMI profile, and precautions from our Python engine.</p>
-          </div>
-
-          <!-- RESULTS CONTAINER (Hidden by default, shown when analyzed) -->
-          <div id="results-container" class="results-layout" style="display: none;">
-            
-            <!-- Quick Summary Panel -->
-            <div class="card glass score-card">
-              <div class="score-grid">
-                
-                <div class="score-block">
-                  <span class="block-label">Your BMI Status</span>
-                  <span class="block-val" id="res-bmi-val">--</span>
-                  <span class="block-tag badge-normal" id="res-bmi-tag">Normal</span>
-                </div>
-
-                <div class="score-block border-left">
-                  <span class="block-label">Heart Health Assessment</span>
-                  <span class="block-val text-normal" id="res-heart-val">Normal Pulse</span>
-                  <span class="block-tag badge-normal" id="res-heart-tag">Healthy Resting</span>
-                </div>
-
-                <div class="score-block border-left">
-                  <span class="block-label">Overall Cardio Risk</span>
-                  <span class="block-val" id="res-risk-val">Low</span>
-                  <div class="risk-meter-container">
-                    <div class="risk-bar" id="res-risk-bar"></div>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-            <!-- Health Status Diagnostics -->
-            <div class="card glass diagnostic-card">
+          <!-- COLUMN 1: METRICS FORM -->
+          <div class="grid-col col-left">
+            <div class="card glass">
               <div class="card-header">
-                <div class="icon-circle text-primary">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                <div class="icon-circle">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M3 20v-8a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v8M13 20v-4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v8M3 12V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v6M13 10V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v6"></path></svg>
                 </div>
-                <h3>Diagnostic Analysis</h3>
+                <h3>Enter Patient Vitals</h3>
               </div>
-              <p id="res-diagnostic-summary" class="diagnostic-summary">Your measurements suggest a healthy cardiovascular profile. Below are specific clinical parameters computed from your physical indices.</p>
+              <p class="card-subtitle">Fill in vitals to run predictions and save to the database.</p>
               
-              <div class="metrics-comparison">
-                <div class="comp-item">
-                  <span class="comp-name">Ideal BPM (Age group)</span>
-                  <span class="comp-val" id="comp-bpm-ideal">60 - 80 BPM</span>
-                </div>
-                <div class="comp-item">
-                  <span class="comp-name">Target Heart Rate (Exercise)</span>
-                  <span class="comp-val" id="comp-bpm-exercise">100 - 150 BPM</span>
-                </div>
-                <div class="comp-item">
-                  <span class="comp-name">Max Heart Rate</span>
-                  <span class="comp-val" id="comp-bpm-max">185 BPM</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Detailed Precautions & Recommendations Panel -->
-            <div class="card glass recommendation-card">
-              <div class="card-header">
-                <div class="icon-circle text-success">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                </div>
-                <h3>Personalized Precautions & Recommendations</h3>
-              </div>
-
-              <!-- Recommendation Tabs / Categories -->
-              <div class="rec-grid">
-                
-                <!-- Diet Section -->
-                <div class="rec-item glass-nested">
-                  <div class="rec-header">
-                    <span class="rec-icon">🥗</span>
-                    <h4>Nutrition & Hydration</h4>
+              <form id="vitals-form" onsubmit="event.preventDefault(); analyzeHealth();">
+                <div class="form-grid">
+                  <div class="input-group">
+                    <label for="height">Height (cm)</label>
+                    <input type="number" id="height" min="100" max="250" placeholder="e.g. 175" required>
+                    <span class="focus-border"></span>
                   </div>
-                  <ul id="rec-diet-list">
-                    <li>Maintain balanced diets with plenty of leafy greens.</li>
-                  </ul>
-                </div>
-
-                <!-- Exercise Section -->
-                <div class="rec-item glass-nested">
-                  <div class="rec-header">
-                    <span class="rec-icon">🏃‍♂️</span>
-                    <h4>Cardiovascular Activity</h4>
+                  
+                  <div class="input-group">
+                    <label for="weight">Weight (kg)</label>
+                    <input type="number" id="weight" min="30" max="250" placeholder="e.g. 70" required>
+                    <span class="focus-border"></span>
                   </div>
-                  <ul id="rec-exercise-list">
-                    <li>Perform moderate cardio exercise 150 minutes a week.</li>
-                  </ul>
-                </div>
 
-                <!-- Lifestyle & Habits Section -->
-                <div class="rec-item glass-nested">
-                  <div class="rec-header">
-                    <span class="rec-icon">🧘</span>
-                    <h4>Stress & Sleep Guidelines</h4>
+                  <div class="input-group">
+                    <label for="age">Age (years)</label>
+                    <input type="number" id="age" min="1" max="120" placeholder="e.g. 35" required>
+                    <span class="focus-border"></span>
                   </div>
-                  <ul id="rec-lifestyle-list">
-                    <li>Aim for 7-9 hours of consistent sleep.</li>
-                  </ul>
-                </div>
 
-                <!-- Clinical Warnings/Precautions Section -->
-                <div class="rec-item glass-nested warning-box" id="warning-section">
-                  <div class="rec-header">
-                    <span class="rec-icon">⚠️</span>
-                    <h4>Clinical Precautions</h4>
+                  <div class="input-group">
+                    <label for="bpm">Heart Rate (BPM)</label>
+                    <input type="number" id="bpm" min="30" max="220" placeholder="e.g. 72" required>
+                    <span class="focus-border"></span>
                   </div>
-                  <ul id="rec-warning-list">
-                    <li>Monitor vitals regularly and report persistent symptoms to a healthcare provider.</li>
-                  </ul>
                 </div>
 
-              </div>
+                <div class="input-group">
+                  <label for="activity-level">Daily Physical Activity Level</label>
+                  <select id="activity-level" class="styled-select">
+                    <option value="sedentary">Sedentary (Little or no exercise)</option>
+                    <option value="moderate" selected>Moderately Active (Moderate exercise 3-5 days/wk)</option>
+                    <option value="highly-active">Highly Active (Heavy exercise/sports 6-7 days/wk)</option>
+                  </select>
+                </div>
 
-              <div class="action-buttons">
-                <button class="btn btn-secondary btn-full" onclick="window.print()">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                  Export Health Report (PDF)
+                <button type="submit" class="btn btn-primary btn-full btn-glow">
+                  Analyze & Save Patient
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
                 </button>
-              </div>
+              </form>
             </div>
 
+            <!-- ECG SCANNER VISUALIZER -->
+            <div class="card glass ecg-card">
+              <div class="card-header">
+                <div class="icon-circle">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                </div>
+                <h3>Live Electrocardiogram (ECG) Simulator</h3>
+              </div>
+              <div class="ecg-monitor-wrapper">
+                <canvas id="ecg-canvas"></canvas>
+                <div class="ecg-readout">
+                  <div class="readout-item">
+                    <span class="label">PULSE STATE</span>
+                    <span id="ecg-state-text" class="val text-normal">WAITING</span>
+                  </div>
+                  <div class="readout-item">
+                    <span class="label">LIVE BPM</span>
+                    <span id="ecg-bpm-text" class="val">--</span>
+                  </div>
+                </div>
+              </div>
+              <div class="ecg-presets">
+                <span>Simulation Presets:</span>
+                <div class="preset-buttons">
+                  <button class="btn btn-secondary btn-xs active" onclick="setECGPreset('normal')">Normal (70)</button>
+                  <button class="btn btn-secondary btn-xs" onclick="setECGPreset('tachy')">High (115)</button>
+                  <button class="btn btn-secondary btn-xs" onclick="setECGPreset('brady')">Low (45)</button>
+                  <button class="btn btn-secondary btn-xs" onclick="setECGPreset('arrhythmia')">Arrhythmia</button>
+                </div>
+              </div>
+            </div>
           </div>
 
-        </div>
+          <!-- COLUMN 2: ANALYSIS & RECOMMENDATIONS -->
+          <div class="grid-col col-right">
+            
+            <!-- Welcome/Prompt state -->
+            <div id="results-placeholder" class="card glass empty-state">
+              <div class="pulse-icon-container large-icon">
+                <svg class="heart-svg" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M16,28.261L4.351,16.612C2.128,14.389,2.128,10.785,4.351,8.562l0,0c2.223-2.223,5.827-2.223,8.05,0l1.411,1.411
+                  c1.207,1.207,3.167,1.207,4.375,0l1.411-1.411c2.223-2.223,5.827-2.223,8.05,0h0c2.223,2.223,2.223,5.827,0,8.05L16,28.261z" />
+                </svg>
+              </div>
+              <h3>Ready for Analysis</h3>
+              <p>Input patient metrics on the left, then click <strong>"Analyze & Save Patient"</strong> to compute predictions using the Random Forest ML classifier and write to SQLite.</p>
+            </div>
 
+            <!-- RESULTS CONTAINER -->
+            <div id="results-container" class="results-layout" style="display: none;">
+              
+              <!-- Quick Summary Panel -->
+              <div class="card glass score-card">
+                <div class="score-grid">
+                  
+                  <div class="score-block">
+                    <span class="block-label">BMI Score</span>
+                    <span class="block-val" id="res-bmi-val">--</span>
+                    <span class="block-tag badge-normal" id="res-bmi-tag">Normal</span>
+                  </div>
+
+                  <div class="score-block border-left">
+                    <span class="block-label">Pulse Grading</span>
+                    <span class="block-val text-normal" id="res-heart-val">Normal Pulse</span>
+                    <span class="block-tag badge-normal" id="res-heart-tag">Healthy Resting</span>
+                  </div>
+
+                  <div class="score-block border-left">
+                    <span class="block-label">CVD Risk (Random Forest)</span>
+                    <span class="block-val" id="res-risk-val">Low</span>
+                    <div class="risk-meter-container">
+                      <div class="risk-bar" id="res-risk-bar"></div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- Health Status Diagnostics -->
+              <div class="card glass diagnostic-card">
+                <div class="card-header">
+                  <div class="icon-circle text-primary">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                  </div>
+                  <h3>Diagnostic Analysis</h3>
+                </div>
+                <p id="res-diagnostic-summary" class="diagnostic-summary">Analyzing...</p>
+                
+                <div class="metrics-comparison">
+                  <div class="comp-item">
+                    <span class="comp-name">Ideal BPM (Age group)</span>
+                    <span class="comp-val" id="comp-bpm-ideal">60 - 80 BPM</span>
+                  </div>
+                  <div class="comp-item">
+                    <span class="comp-name">Target Heart Rate (Exercise)</span>
+                    <span class="comp-val" id="comp-bpm-exercise">100 - 150 BPM</span>
+                  </div>
+                  <div class="comp-item">
+                    <span class="comp-name">Max Heart Rate</span>
+                    <span class="comp-val" id="comp-bpm-max">185 BPM</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Detailed Precautions & Recommendations Panel -->
+              <div class="card glass recommendation-card">
+                <div class="card-header">
+                  <div class="icon-circle text-success">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  </div>
+                  <h3>Personalized Precautions & Recommendations</h3>
+                </div>
+
+                <div class="rec-grid">
+                  
+                  <div class="rec-item glass-nested">
+                    <div class="rec-header">
+                      <span class="rec-icon">🥗</span>
+                      <h4>Nutrition & Hydration</h4>
+                    </div>
+                    <ul id="rec-diet-list"></ul>
+                  </div>
+
+                  <div class="rec-item glass-nested">
+                    <div class="rec-header">
+                      <span class="rec-icon">🏃‍♂️</span>
+                      <h4>Cardiovascular Activity</h4>
+                    </div>
+                    <ul id="rec-exercise-list"></ul>
+                  </div>
+
+                  <div class="rec-item glass-nested">
+                    <div class="rec-header">
+                      <span class="rec-icon">🧘</span>
+                      <h4>Stress & Sleep Guidelines</h4>
+                    </div>
+                    <ul id="rec-lifestyle-list"></ul>
+                  </div>
+
+                  <div class="rec-item glass-nested warning-box" id="warning-section">
+                    <div class="rec-header">
+                      <span class="rec-icon">⚠️</span>
+                      <h4>Clinical Precautions</h4>
+                    </div>
+                    <ul id="rec-warning-list"></ul>
+                  </div>
+
+                </div>
+
+                <div class="action-buttons">
+                  <button class="btn btn-secondary btn-full" onclick="window.print()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                    Export Health Report (PDF)
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
       </div>
+
+      <!-- ================= VIEW B: DATABASE VIEW ================= -->
+      <div id="view-database" class="tab-view">
+        <div class="database-layout card glass">
+          <div class="db-controls">
+            <div class="search-box">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" id="search-input" placeholder="Search saved records by patient name..." onkeyup="filterRecords()">
+            </div>
+            <button class="btn btn-secondary" onclick="exportDatabaseCSV()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Export Database (CSV)
+            </button>
+          </div>
+
+          <div class="table-wrapper">
+            <table class="db-table">
+              <thead>
+                <tr>
+                  <th>Date Created</th>
+                  <th>Patient Name</th>
+                  <th>Age</th>
+                  <th>Height</th>
+                  <th>Weight</th>
+                  <th>BPM</th>
+                  <th>Activity</th>
+                  <th>BMI</th>
+                  <th>ML Risk Level</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="db-table-body">
+                <tr>
+                  <td colspan="10" class="text-center text-muted">No records found. Run a vital diagnostic on the left to add a patient.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
     </section>
 
   </div>
 
   <footer class="main-footer">
-    <p>&copy; 2026 PulseGuard AI. Developed as an advanced medical simulation dashboard in Flask. Not a replacement for professional clinical advice.</p>
+    <p>&copy; 2026 PulseGuard AI. Full-Stack Cardiology Database & ML Prediction Platform. For presentation review.</p>
   </footer>
 
   <script src="{{ url_for('static', filename='app.js') }}"></script>

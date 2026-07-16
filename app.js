@@ -1,5 +1,5 @@
 /* ==========================================================================
-   PulseGuard AI - Frontend Controller (Flask Interface)
+   PulseGuard AI - Frontend Controller (Flask + SQLite Database Interface)
    ========================================================================== */
 
 // App State
@@ -29,13 +29,16 @@ const canvas = document.getElementById('ecg-canvas');
 const ctx = canvas.getContext('2d');
 let animationFrameId = null;
 
+// Database State
+let cachedRecords = [];
+
 // Initialization on Load
 window.addEventListener('DOMContentLoaded', () => {
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
 
-  const savedName = localStorage.getItem('pg_python_user_name');
-  const savedMetrics = localStorage.getItem('pg_python_user_metrics');
+  const savedName = localStorage.getItem('pg_database_user_name');
+  const savedMetrics = localStorage.getItem('pg_database_user_metrics');
 
   if (savedName) {
     state.userName = savedName;
@@ -63,7 +66,7 @@ function resizeCanvas() {
 function showScreen(screenId) {
   if (screenId === 'welcome') {
     welcomeScreen.classList.add('active');
-    dashboardScreen.classList.remove('remove'); // safety reset
+    dashboardScreen.classList.remove('active');
     welcomeScreen.style.display = 'block';
     dashboardScreen.style.display = 'none';
   } else if (screenId === 'dashboard') {
@@ -83,15 +86,16 @@ function proceedToDashboard() {
   if (nameInput.value.trim() === '') return;
 
   state.userName = nameInput.value.trim();
-  localStorage.setItem('pg_python_user_name', state.userName);
+  localStorage.setItem('pg_database_user_name', state.userName);
   
   showScreen('dashboard');
   startECG('normal');
+  showToast(`Welcome to PulseGuard, ${state.userName}!`, 'info');
 }
 
 function resetApp() {
-  localStorage.removeItem('pg_python_user_name');
-  localStorage.removeItem('pg_python_user_metrics');
+  localStorage.removeItem('pg_database_user_name');
+  localStorage.removeItem('pg_database_user_metrics');
   
   state.userName = '';
   state.metrics = {
@@ -110,6 +114,9 @@ function resetApp() {
 
   showScreen('welcome');
   stopECG();
+  
+  // Set tab back to diagnostics
+  switchTab('dashboard');
 }
 
 function populateForm() {
@@ -118,6 +125,21 @@ function populateForm() {
   document.getElementById('age').value = state.metrics.age;
   document.getElementById('bpm').value = state.metrics.bpm;
   document.getElementById('activity-level').value = state.metrics.activityLevel;
+}
+
+// Navigation Tab Switcher
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.tab-view').forEach(view => view.classList.remove('active'));
+
+  if (tabId === 'dashboard') {
+    document.getElementById('tab-dashboard').classList.add('active');
+    document.getElementById('view-dashboard').classList.add('active');
+  } else if (tabId === 'database') {
+    document.getElementById('tab-database').classList.add('active');
+    document.getElementById('view-database').classList.add('active');
+    loadRecords();
+  }
 }
 
 function setECGPreset(presetType) {
@@ -146,7 +168,7 @@ function setECGPreset(presetType) {
   }
 }
 
-// REST Client: Sends metrics to Flask Backend
+// REST Client: Sends metrics to Flask Backend and saves to Database
 function analyzeHealth() {
   const height = parseFloat(document.getElementById('height').value);
   const weight = parseFloat(document.getElementById('weight').value);
@@ -161,7 +183,13 @@ function analyzeHealth() {
 
   // Update State
   state.metrics = { height, weight, age, bpm, activityLevel };
-  localStorage.setItem('pg_python_user_metrics', JSON.stringify(state.metrics));
+  localStorage.setItem('pg_database_user_metrics', JSON.stringify(state.metrics));
+
+  // Package payload (with patient name for database storage)
+  const payload = {
+    name: state.userName,
+    ...state.metrics
+  };
 
   // Trigger POST request to Python backend
   fetch('/api/analyze', {
@@ -169,7 +197,7 @@ function analyzeHealth() {
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify(state.metrics)
+    body: JSON.stringify(payload)
   })
   .then(response => {
     if (!response.ok) throw new Error('API request failed');
@@ -177,6 +205,7 @@ function analyzeHealth() {
   })
   .then(data => {
     renderAnalysisResults(data);
+    showToast(`Patient diagnostics saved to SQLite database successfully!`, 'success');
     
     // Sync ECG simulation state to match the returned heart diagnosis
     let currentPreset = 'normal';
@@ -187,13 +216,12 @@ function analyzeHealth() {
   })
   .catch(error => {
     console.error('Error analyzing health:', error);
-    alert('Failed to connect to the Python health analysis service.');
+    showToast('Failed to connect to the health database services.', 'danger');
   });
 }
 
 // Renders calculations received from the Python backend
 function renderAnalysisResults(data) {
-  // Sync basic index cards
   document.getElementById('res-bmi-val').textContent = data.bmi.val;
   
   const bmiTag = document.getElementById('res-bmi-tag');
@@ -214,21 +242,18 @@ function renderAnalysisResults(data) {
   const riskBar = document.getElementById('res-risk-bar');
   riskBar.className = `risk-bar ${data.risk.class}`;
 
-  // Sync diagnostic values
   document.getElementById('res-diagnostic-summary').textContent = 
-    `Diagnostic Insight: Age ${state.metrics.age} physical profile shows a BMI of ${data.bmi.val} (${data.bmi.category}). ${data.heart.description}`;
+    `Diagnostic Insight: Patient profile shows a BMI of ${data.bmi.val} (${data.bmi.category}). ${data.heart.description}`;
 
   document.getElementById('comp-bpm-ideal').textContent = data.stats.ideal_bpm;
   document.getElementById('comp-bpm-exercise').textContent = data.stats.exercise_bpm;
   document.getElementById('comp-bpm-max').textContent = `${data.stats.max_hr} BPM`;
 
-  // Render list guidelines
   renderList('rec-diet-list', data.recommendations.diet);
   renderList('rec-exercise-list', data.recommendations.exercise);
   renderList('rec-lifestyle-list', data.recommendations.lifestyle);
   renderList('rec-warning-list', data.recommendations.warnings);
 
-  // Sync warnings style
   const warningSection = document.getElementById('warning-section');
   if (data.recommendations.has_warnings) {
     warningSection.style.borderColor = 'var(--color-danger)';
@@ -238,7 +263,6 @@ function renderAnalysisResults(data) {
     warningSection.style.background = 'rgba(255, 255, 255, 0.02)';
   }
 
-  // Show Results layout
   document.getElementById('results-placeholder').style.display = 'none';
   document.getElementById('results-container').style.display = 'block';
 
@@ -253,6 +277,147 @@ function renderList(elementId, items) {
   items.forEach(item => {
     container.innerHTML += `<li>${item}</li>`;
   });
+}
+
+// ==========================================================================
+// Database API Calls
+// ==========================================================================
+
+function loadRecords() {
+  const tbody = document.getElementById('db-table-body');
+  tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted">Retrieving patient database files...</td></tr>`;
+
+  fetch('/api/records')
+  .then(response => {
+    if (!response.ok) throw new Error('Failed to fetch records');
+    return response.json();
+  })
+  .then(data => {
+    cachedRecords = data;
+    renderRecordsTable(data);
+  })
+  .catch(error => {
+    console.error('Error loading records:', error);
+    showToast('Failed to load database records', 'danger');
+  });
+}
+
+function renderRecordsTable(records) {
+  const tbody = document.getElementById('db-table-body');
+  
+  if (!records || records.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted">No records found. Run a vital diagnostic on the left to add a patient.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = '';
+  records.forEach(row => {
+    const dateStr = new Date(row.created_at).toLocaleString();
+    const riskClass = row.risk_level.toLowerCase().includes('high') ? 'badge-danger' : 
+                      row.risk_level.toLowerCase().includes('mod') ? 'badge-warning' : 'badge-normal';
+
+    tbody.innerHTML += `
+      <tr>
+        <td>${dateStr}</td>
+        <td><strong>${escapeHtml(row.name)}</strong></td>
+        <td>${row.age} yrs</td>
+        <td>${row.height} cm</td>
+        <td>${row.weight} kg</td>
+        <td>${row.bpm} BPM</td>
+        <td class="text-capitalize">${row.activity.replace('-', ' ')}</td>
+        <td>${row.bmi}</td>
+        <td><span class="block-tag ${riskClass}" style="margin-top:0">${row.risk_level}</span></td>
+        <td>
+          <button class="btn-danger-xs" onclick="deleteRecord(${row.id})">Delete</button>
+        </td>
+      </tr>
+    `;
+  });
+}
+
+function deleteRecord(id) {
+  if (!confirm('Are you sure you want to permanently delete this patient record?')) return;
+
+  fetch(`/api/records/${id}`, {
+    method: 'DELETE'
+  })
+  .then(response => {
+    if (!response.ok) throw new Error('Delete failed');
+    return response.json();
+  })
+  .then(data => {
+    if (data.success) {
+      showToast('Patient record deleted successfully!', 'success');
+      loadRecords();
+    }
+  })
+  .catch(error => {
+    console.error('Error deleting record:', error);
+    showToast('Failed to delete patient record', 'danger');
+  });
+}
+
+function filterRecords() {
+  const query = document.getElementById('search-input').value.toLowerCase();
+  const filtered = cachedRecords.filter(r => r.name.toLowerCase().includes(query));
+  renderRecordsTable(filtered);
+}
+
+function exportDatabaseCSV() {
+  if (cachedRecords.length === 0) {
+    showToast('No records available to export', 'danger');
+    return;
+  }
+
+  let csvContent = "data:text/csv;charset=utf-8,";
+  csvContent += "ID,Date Created,Patient Name,Age,Height (cm),Weight (kg),BPM,Activity,BMI,ML Risk Level\n";
+
+  cachedRecords.forEach(row => {
+    const line = [
+      row.id,
+      `"${row.created_at}"`,
+      `"${row.name.replace(/"/g, '""')}"`,
+      row.age,
+      row.height,
+      row.weight,
+      row.bpm,
+      row.activity,
+      row.bmi,
+      `"${row.risk_level}"`
+    ].join(",");
+    csvContent += line + "\n";
+  });
+
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `cardiology_patient_records_${Date.now()}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  showToast('Database exported successfully as CSV!', 'success');
+}
+
+// Helper Utilities
+function escapeHtml(str) {
+  return str.replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+}
+
+function showToast(message, type = 'success') {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.remove();
+  }, 3000);
 }
 
 // ==========================================================================
