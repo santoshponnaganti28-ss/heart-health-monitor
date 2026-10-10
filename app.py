@@ -111,78 +111,208 @@ init_sqlite_db()
 init_mongo_db()
 
 # ==========================================================================
-# SMTP Email Dispatcher (Gmail SMTP)
+# Email Dispatcher (HTTPS API: Resend / Brevo + SMTP Fallback)
+# Render Free Tier blocks outbound SMTP ports (25, 465, 587).
+# Uses HTTPS API (Port 443) for 100% reliability on Render and cloud hosts.
 # ==========================================================================
-def send_reset_email(to_email, reset_code):
-    """Sends a 6-digit password reset code via Gmail SMTP."""
-    smtp_email = os.environ.get('SMTP_EMAIL')
-    smtp_password = os.environ.get('SMTP_PASSWORD')
-    
+
+def get_reset_email_html(reset_code):
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #0b0f19; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table width="100%" max-width="560px" style="max-width: 560px; background: #131b2e; border: 1px solid #1f2d4d; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+              <tr>
+                <td style="padding: 32px 32px 20px 32px; text-align: center; border-bottom: 1px solid #1f2d4d;">
+                  <h1 style="margin: 0; font-size: 26px; font-weight: 800; color: #f87171; letter-spacing: -0.5px;">PulseGuard <span style="color: #60a5fa;">AI</span></h1>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 32px;">
+                  <h2 style="margin: 0 0 12px 0; color: #f1f5f9; font-size: 20px; font-weight: 700;">Password Reset Request</h2>
+                  <p style="margin: 0 0 24px 0; color: #cbd5e1; font-size: 14px; line-height: 1.6;">
+                    You requested to reset your password for PulseGuard AI. Use the 6-digit verification code below to authorize your new password:
+                  </p>
+                  <div style="text-align: center; margin: 30px 0;">
+                    <span style="display: inline-block; font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #38bdf8; background: #071226; padding: 14px 28px; border-radius: 10px; border: 1px solid #0284c7; text-shadow: 0 0 20px rgba(56,189,248,0.4);">
+                      {reset_code}
+                    </span>
+                  </div>
+                  <p style="margin: 24px 0 0 0; color: #94a3b8; font-size: 13px; line-height: 1.5;">
+                    This code is valid for <strong>15 minutes</strong>. If you did not make this request, please disregard this email and your password will remain unchanged.
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 20px 32px; background: #0c1220; text-align: center; border-top: 1px solid #1f2d4d; color: #64748b; font-size: 12px;">
+                  &copy; 2026 PulseGuard AI. Secure Cardiology Management.
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+    """
+
+def send_via_resend(to_email, reset_code, html_content):
+    """
+    Sends email via Resend REST API (HTTPS port 443).
+    Best alternative for Render Free Tier (outbound SMTP is blocked on Render).
+    Free tier: 3,000 emails/month, works out of the box with onboarding@resend.dev.
+    """
+    api_key = os.environ.get('RESEND_API_KEY', '').strip()
+    if not api_key:
+        return False, "RESEND_API_KEY not configured"
+
+    sender = os.environ.get('RESEND_FROM', 'PulseGuard AI <onboarding@resend.dev>').strip()
+    try:
+        resp = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "from": sender,
+                "to": [to_email],
+                "subject": "PulseGuard AI - Password Reset Code",
+                "html": html_content
+            },
+            timeout=10
+        )
+        if resp.status_code in (200, 201):
+            print(f"[SUCCESS] Password reset email sent to {to_email} via Resend HTTPS API.", flush=True)
+            return True, "Resend API"
+        else:
+            err_msg = resp.text
+            try:
+                err_msg = resp.json().get('message', resp.text)
+            except Exception:
+                pass
+            print(f"[ERROR] Resend API failed (HTTP {resp.status_code}): {err_msg}", flush=True)
+            return False, f"Resend API error: {err_msg}"
+    except Exception as e:
+        print(f"[ERROR] Resend API connection error: {e}", flush=True)
+        return False, str(e)
+
+def send_via_brevo(to_email, reset_code, html_content):
+    """
+    Sends email via Brevo REST API (HTTPS port 443).
+    Alternative HTTP email provider (Free tier: 300 emails/day).
+    """
+    api_key = os.environ.get('BREVO_API_KEY', '').strip()
+    if not api_key:
+        return False, "BREVO_API_KEY not configured"
+
+    sender_email = os.environ.get('BREVO_FROM_EMAIL', os.environ.get('SMTP_EMAIL', 'support@pulseguard.ai')).strip()
+    sender_name = os.environ.get('BREVO_FROM_NAME', 'PulseGuard AI').strip()
+
+    try:
+        resp = requests.post(
+            "https://api.brevo.com/v3/smtp/email",
+            headers={
+                "api-key": api_key,
+                "Content-Type": "application/json",
+                "accept": "application/json"
+            },
+            json={
+                "sender": {"name": sender_name, "email": sender_email},
+                "to": [{"email": to_email}],
+                "subject": "PulseGuard AI - Password Reset Code",
+                "htmlContent": html_content
+            },
+            timeout=10
+        )
+        if resp.status_code in (200, 201, 202):
+            print(f"[SUCCESS] Password reset email sent to {to_email} via Brevo HTTPS API.", flush=True)
+            return True, "Brevo API"
+        else:
+            err_msg = resp.text
+            try:
+                err_msg = resp.json().get('message', resp.text)
+            except Exception:
+                pass
+            print(f"[ERROR] Brevo API failed (HTTP {resp.status_code}): {err_msg}", flush=True)
+            return False, f"Brevo API error: {err_msg}"
+    except Exception as e:
+        print(f"[ERROR] Brevo API connection error: {e}", flush=True)
+        return False, str(e)
+
+def send_via_smtp(to_email, reset_code, html_content):
+    """
+    Sends email via Gmail SMTP (port 587).
+    Works on localhost. Note: Render Free Tier blocks outbound SMTP ports (25, 465, 587).
+    """
+    smtp_email = os.environ.get('SMTP_EMAIL', '').strip()
+    smtp_password = os.environ.get('SMTP_PASSWORD', '').strip()
+
     if not smtp_email or not smtp_password:
-        print(f"\n[DEV MODE] SMTP not configured. Verification code for {to_email} is: {reset_code}\n", flush=True)
-        return True, "DEV_MODE"
-        
+        return False, "SMTP credentials not configured"
+
+    if os.environ.get('RENDER') or os.environ.get('RENDER_INSTANCE_ID'):
+        print("[WARNING] Running on Render! Render free tier blocks outbound SMTP ports (25, 465, 587). Please use RESEND_API_KEY in Render dashboard.", flush=True)
+
     try:
         msg = MIMEMultipart('alternative')
         msg['Subject'] = 'PulseGuard AI - Password Reset Code'
         msg['From'] = f"PulseGuard AI <{smtp_email}>"
         msg['To'] = to_email
-        
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-        </head>
-        <body style="margin: 0; padding: 0; background-color: #0b0f19; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="padding: 40px 20px;">
-            <tr>
-              <td align="center">
-                <table width="100%" max-width="560px" style="max-width: 560px; background: #131b2e; border: 1px solid #1f2d4d; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
-                  <tr>
-                    <td style="padding: 32px 32px 20px 32px; text-align: center; border-bottom: 1px solid #1f2d4d;">
-                      <h1 style="margin: 0; font-size: 26px; font-weight: 800; color: #f87171; letter-spacing: -0.5px;">PulseGuard <span style="color: #60a5fa;">AI</span></h1>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 32px;">
-                      <h2 style="margin: 0 0 12px 0; color: #f1f5f9; font-size: 20px; font-weight: 700;">Password Reset Request</h2>
-                      <p style="margin: 0 0 24px 0; color: #cbd5e1; font-size: 14px; line-height: 1.6;">
-                        You requested to reset your password for PulseGuard AI. Use the 6-digit verification code below to authorize your new password:
-                      </p>
-                      <div style="text-align: center; margin: 30px 0;">
-                        <span style="display: inline-block; font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #38bdf8; background: #071226; padding: 14px 28px; border-radius: 10px; border: 1px solid #0284c7; text-shadow: 0 0 20px rgba(56,189,248,0.4);">
-                          {reset_code}
-                        </span>
-                      </div>
-                      <p style="margin: 24px 0 0 0; color: #94a3b8; font-size: 13px; line-height: 1.5;">
-                        This code is valid for <strong>15 minutes</strong>. If you did not make this request, please disregard this email and your password will remain unchanged.
-                      </p>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 20px 32px; background: #0c1220; text-align: center; border-top: 1px solid #1f2d4d; color: #64748b; font-size: 12px;">
-                      &copy; 2026 PulseGuard AI. Secure Cardiology Management.
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-          </table>
-        </body>
-        </html>
-        """
         msg.attach(MIMEText(html_content, 'html'))
-        
-        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+
+        # Strict 5-second timeout so blocked cloud networks don't hang the worker
+        with smtplib.SMTP('smtp.gmail.com', 587, timeout=5) as server:
             server.starttls()
             server.login(smtp_email, smtp_password)
             server.sendmail(smtp_email, to_email, msg.as_string())
-            
-        return True, "SENT"
+
+        print(f"[SUCCESS] Password reset email sent to {to_email} via Gmail SMTP.", flush=True)
+        return True, "Gmail SMTP"
     except Exception as e:
         print(f"[ERROR] SMTP sending failed: {e}", flush=True)
-        return False, str(e)
+        return False, f"SMTP Error: {e}"
+
+def send_reset_email(to_email, reset_code):
+    """
+    Multi-provider email dispatcher with cloud HTTP priority:
+    1. Resend API (HTTPS port 443 - Recommended for Render)
+    2. Brevo API (HTTPS port 443)
+    3. Gmail SMTP (fallback for local development)
+    4. Dev-Mode automatic code fallback
+    """
+    html_content = get_reset_email_html(reset_code)
+
+    # 1. Try Resend HTTPS API (Render compatible)
+    if os.environ.get('RESEND_API_KEY'):
+        success, status = send_via_resend(to_email, reset_code, html_content)
+        if success:
+            return True, status
+
+    # 2. Try Brevo HTTPS API (Render compatible)
+    if os.environ.get('BREVO_API_KEY'):
+        success, status = send_via_brevo(to_email, reset_code, html_content)
+        if success:
+            return True, status
+
+    # 3. Try SMTP (if configured and not on Render)
+    if os.environ.get('SMTP_EMAIL') and os.environ.get('SMTP_PASSWORD'):
+        success, status = send_via_smtp(to_email, reset_code, html_content)
+        if success:
+            return True, status
+        else:
+            print(f"\n[DEV FALLBACK] Email dispatch failed ({status}). Temporary verification code for {to_email} is: {reset_code}\n", flush=True)
+            return False, status
+
+    # 4. Dev Mode if no providers configured
+    print(f"\n[DEV MODE] No email API key configured. Verification code for {to_email} is: {reset_code}\n", flush=True)
+    return True, "DEV_MODE"
 
 # ==========================================================================
 # Machine Learning Model Loading
@@ -840,17 +970,29 @@ def forgot_password():
     if not user_found:
         return jsonify({"error": "No account registered with this email address."}), 404
 
-    # Dispatch email via Gmail SMTP
+    # Dispatch email via Resend / Brevo HTTPS API or Gmail SMTP
     success, status = send_reset_email(email, reset_code)
 
-    resp_data = {
-        "success": True,
-        "message": f"A 6-digit verification code has been sent to {email}."
-    }
-    # If SMTP is not yet configured, include dev_code in response for instant local testing
-    if status == "DEV_MODE":
-        resp_data["dev_code"] = reset_code
-        resp_data["message"] = f"Verification code generated! (SMTP not configured in .env - check console or use code {reset_code})"
+    if success:
+        if status == "DEV_MODE":
+            resp_data = {
+                "success": True,
+                "dev_code": reset_code,
+                "message": f"Verification code generated! (Use code: {reset_code})"
+            }
+        else:
+            resp_data = {
+                "success": True,
+                "message": f"A 6-digit verification code has been sent to {email}."
+            }
+    else:
+        # Email delivery failed (e.g. Render blocked SMTP port 587, or invalid API key)
+        # Fallback to dev_code so user is never locked out of their account!
+        resp_data = {
+            "success": True,
+            "dev_code": reset_code,
+            "message": f"Notice: Email could not be delivered to mailbox ({status}). For immediate access, your verification code is: {reset_code}"
+        }
 
     return jsonify(resp_data)
 

@@ -304,11 +304,11 @@ function requestResetCode() {
 
       showToast(data.message, 'info');
 
-      // If dev_code was provided (SMTP not yet configured in .env)
+      // If dev_code was provided (automatic fallback)
       if (data.dev_code) {
         const banner = document.getElementById('dev-code-banner');
         banner.style.display = 'block';
-        banner.innerHTML = `<strong>Local Testing Code:</strong> <code>${data.dev_code}</code><br><small>(SMTP not configured in .env - using local verification code)</small>`;
+        banner.innerHTML = `<strong>Verification Code:</strong> <code>${data.dev_code}</code><br><small>(Auto-filled verification code)</small>`;
         document.getElementById('forgot-code').value = data.dev_code;
       }
 
