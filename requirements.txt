@@ -4,4 +4,5 @@ numpy
 pymongo
 python-dotenv
 requests
+resend
 scikit-learn
